@@ -1,0 +1,10 @@
+packages:
+  - "contracts"
+  - "keeper"
+  - "web"
+allowBuilds:
+  bufferutil: true
+  esbuild: true
+  keccak: true
+  sharp: true
+  utf-8-validate: true

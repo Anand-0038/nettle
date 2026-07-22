@@ -1,0 +1,21 @@
+{
+  "chainId": 11155111,
+  "mode": "nox+hook+uniswap-v4-residual",
+  "v3Fallback": false,
+  "deployer": "0xfb76c4b6912bcf358752fb4b4b15b959efadd915",
+  "keeper": "0xfb76c4b6912bcf358752fb4b4b15b959efadd915",
+  "token0": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "token1": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+  "usdc": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "weth": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+  "swapRouter02": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+  "poolFee": 3000,
+  "tickSpacing": 60,
+  "poolHooks": "0xd20f5fD8094A000e37e5540dfE34444cd30780c0",
+  "executor": "0xfd84a8e2996875e5e34171e467c4f2b8221c4793",
+  "hook": "0xd20f5fD8094A000e37e5540dfE34444cd30780c0",
+  "registry": "0xd5d950a0b211afe67ad4e5a8f28804b42bc2b71f",
+  "noxCompute": "0x24Ef36Ec5b626D7DCD09a98F3083c2758F0F77bF",
+  "v4PoolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
+  "path": "Registry → NettleHook → UniswapV4Executor → PoolManager.swap (residual only)"
+}

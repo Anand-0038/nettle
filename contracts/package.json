@@ -1,0 +1,27 @@
+{
+  "name": "@nettle/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "hardhat clean",
+    "compile": "hardhat compile",
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy-local.ts --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy-sepolia.ts --network sepolia",
+    "deploy:sepolia:v4": "hardhat run scripts/deploy-sepolia-v4.ts --network sepolia"
+  },
+  "dependencies": {
+    "@iexec-nox/nox-protocol-contracts": "^0.2.3",
+    "@openzeppelin/contracts": "^5.6.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.4",
+    "@types/node": "^22.15.0",
+    "hardhat": "^3.4.0",
+    "typescript": "~5.8.0",
+    "viem": "^2.48.4"
+  }
+}

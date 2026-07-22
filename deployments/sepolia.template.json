@@ -1,0 +1,18 @@
+{
+  "chainId": 11155111,
+  "mode": "nox+uniswap-v3",
+  "note": "Run: PRIVATE_KEY=0x... pnpm --filter @nettle/contracts deploy:sepolia",
+  "usdc": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "weth": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+  "swapRouter02": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+  "noxCompute": "0x24Ef36Ec5b626D7DCD09a98F3083c2758F0F77bF",
+  "v4PoolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
+  "poolFee": 3000,
+  "deployer": "FILL_AFTER_DEPLOY",
+  "keeper": "FILL_AFTER_DEPLOY",
+  "token0": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "token1": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+  "executor": "FILL_AFTER_DEPLOY",
+  "registry": "FILL_AFTER_DEPLOY",
+  "hook": "FILL_AFTER_DEPLOY"
+}

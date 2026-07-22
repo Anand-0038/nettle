@@ -1,0 +1,31 @@
+# deps / build
+node_modules
+dist
+.next
+out
+coverage
+
+# hardhat / foundry generated
+cache
+artifacts
+typechain-types
+.hardhat
+contracts/cache
+contracts/artifacts
+**/tsconfig.tsbuildinfo
+*.tsbuildinfo
+console-history.txt
+
+# env & secrets
+.env
+.env.*
+!.env.example
+web/.env.local
+
+# local-only deploys
+deployments/local.json
+
+# logs / OS
+*.log
+.DS_Store
+.pnpm-store

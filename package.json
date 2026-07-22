@@ -1,0 +1,19 @@
+{
+  "name": "nettle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nettle — confidential batch-swap router for Uniswap using iExec Nox",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "contracts:compile": "pnpm --filter @nettle/contracts compile",
+    "contracts:test": "pnpm --filter @nettle/contracts test",
+    "keeper:dev": "pnpm --filter @nettle/keeper dev",
+    "web:dev": "pnpm --filter @nettle/web dev",
+    "web:build": "pnpm --filter @nettle/web build",
+    "setup": "pnpm install && pnpm contracts:compile"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.1.3"
+}
