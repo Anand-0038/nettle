@@ -440,6 +440,58 @@ select {
   color: #fff;
 }
 
+.epoch-pipeline-stages {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.pipeline-stage {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pipeline-stage-card {
+  position: relative;
+  flex: 1;
+  min-height: 132px;
+  padding: 18px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pipeline-stage-card > svg { color: var(--fox-deep); }
+.pipeline-stage-card strong { display: block; color: var(--ink); font-size: 0.92rem; }
+.pipeline-detail, .pipeline-hash { display: block; margin-top: 4px; font-size: 0.72rem; line-height: 1.35; overflow-wrap: normal; word-break: normal; }
+.pipeline-hash { overflow-wrap: anywhere; }
+.pipeline-stage-number { position: absolute; top: 9px; right: 10px; font: 700 0.66rem var(--mono); color: var(--muted); }
+.pipeline-stage.active .pipeline-stage-card { background: var(--fox-soft); border-color: rgba(232, 118, 45, 0.5); box-shadow: 0 0 0 3px rgba(232, 118, 45, 0.1); }
+.pipeline-stage.complete .pipeline-stage-card { border-color: rgba(25, 135, 84, 0.32); }
+.pipeline-arrow { flex: 0 0 auto; align-self: center; color: var(--fox); }
+.pipeline-transaction { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; color: var(--muted); font-size: 0.78rem; }
+.pipeline-transaction a { display: inline-flex; align-items: center; gap: 4px; color: var(--fox-deep); font-weight: 700; }
+.pipeline-transaction button { display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 8px; padding: 5px 7px; background: var(--paper-2); color: var(--ink-soft); cursor: pointer; font: inherit; font-weight: 700; }
+
+@media (max-width: 760px) {
+  .epoch-pipeline-stages { flex-direction: column; gap: 0; }
+  .pipeline-stage { width: 100%; flex-direction: column; align-items: stretch; gap: 0; }
+  .pipeline-stage-card { min-height: 94px; flex-direction: row; align-items: center; justify-content: flex-start; }
+  .pipeline-stage-card > svg { flex: 0 0 auto; }
+  .pipeline-arrow { transform: rotate(90deg); align-self: center; margin: 3px 0; }
+}
+
 .detail-box {
   margin: 10px 6px 4px;
   padding: 12px 12px 8px;

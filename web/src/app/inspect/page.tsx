@@ -12,6 +12,7 @@ import {
 } from "@/hooks/useRegistry";
 import { DEMO_MODE, EPOCH_STATE, TARGET_CHAIN_ID } from "@/lib/config";
 import { getEventsNearBlock } from "@/lib/blocks";
+import { EpochPipeline } from "@/components/EpochPipeline";
 
 const STATE = ["Open", "Closed", "Executed"] as const;
 
@@ -231,59 +232,20 @@ export default function InspectPage() {
 
           <div className="card">
             <p className="card-title">Pipeline</p>
-            <ol className="steps" style={{ margin: 0 }}>
-              <li>
-                <span>1</span> Encrypted intents sealed (
-                {book.participantCount.toString()} handles)
-              </li>
-              <li>
-                <span>2</span> Net handle{" "}
-                <code className="mono" style={{ fontSize: "0.75rem" }}>
-                  {book.netHandle &&
-                  book.netHandle !==
-                    "0x0000000000000000000000000000000000000000000000000000000000000000"
-                    ? `${book.netHandle.slice(0, 18)}…`
-                    : "— (open or empty)"}
-                </code>
-              </li>
-              <li>
-                <span>3</span> Residual{" "}
-                {book.state >= 2
-                  ? book.residualIn === 0n
-                    ? "0 (full internal cancel)"
-                    : `${formatAmount(
-                        book.residualIn,
-                        book.zeroForOne ? meta.decimals0 : meta.decimals1
-                      )} ${
-                        book.zeroForOne ? meta.symbol0 : meta.symbol1
-                      } → ${formatAmount(
-                        book.residualOut,
-                        book.zeroForOne ? meta.decimals1 : meta.decimals0
-                      )} ${book.zeroForOne ? meta.symbol1 : meta.symbol0}`
-                  : "pending close / execute"}
-              </li>
-              <li>
-                <span>4</span> Path Registry → Hook → UniswapV3Executor →
-                SwapRouter02
-              </li>
-              <li>
-                <span>5</span> Settlement: residual-side pro-rata out + unused
-                escrow refund; opposite side full refund
-              </li>
-            </ol>
-            {data?.execTx && explorer && (
-              <p style={{ marginTop: 12, marginBottom: 0 }}>
-                Execute tx:{" "}
-                <a
-                  href={`${explorer}/tx/${data.execTx}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: "var(--fox-deep)", fontWeight: 700 }}
-                >
-                  {data.execTx.slice(0, 14)}…
-                </a>
-              </p>
-            )}
+            <EpochPipeline
+              state={book.state}
+              participants={book.participantCount}
+              netHandle={book.netHandle}
+              residual={
+                book.state < 2
+                  ? "Awaiting close"
+                  : book.residualIn === 0n
+                    ? "Fully netted internally"
+                    : `${formatAmount(book.residualIn, book.zeroForOne ? meta.decimals0 : meta.decimals1)} ${book.zeroForOne ? meta.symbol0 : meta.symbol1} residual`
+              }
+              execTx={data.execTx}
+              explorer={explorer}
+            />
           </div>
 
           <div className="card">

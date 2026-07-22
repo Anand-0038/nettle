@@ -20,6 +20,7 @@ import {
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { foundry, sepolia } from "viem/chains";
 import { mockRegistryAbi, noxRegistryAbi } from "./abi.js";
+import { startHealthServer } from "./health.js";
 
 // Load ../.env then .env
 loadEnv({ path: resolve(process.cwd(), "../.env") });
@@ -364,6 +365,8 @@ async function tickNox(
 
   return { nextAttempts: 0 };
 }
+
+startHealthServer(Number(process.env.PORT ?? 10000));
 
 main().catch((e) => {
   console.error(e);

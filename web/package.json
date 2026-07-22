@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@iexec-nox/handle": "^0.1.0-beta.13",
+    "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-query": "^5.74.0",
     "@wagmi/core": "^2.22.1",
     "next": "^15.3.0",
