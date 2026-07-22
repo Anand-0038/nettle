@@ -10,7 +10,9 @@ import {
   createWalletClient,
   encodeFunctionData,
   http,
+  type Abi,
   type Address,
+  type EncodeFunctionDataParameters,
   type Hex,
   type PublicClient,
   type Chain,
@@ -61,7 +63,7 @@ async function sendContractTx(opts: {
   account: PrivateKeyAccount;
   chain: Chain;
   address: Address;
-  abi: readonly unknown[];
+  abi: Abi;
   functionName: string;
   args?: readonly unknown[];
 }): Promise<Hex> {
@@ -69,10 +71,10 @@ async function sendContractTx(opts: {
     opts;
 
   const data = encodeFunctionData({
-    abi: abi as never,
-    functionName: functionName as never,
-    args: (args ?? []) as never,
-  });
+    abi,
+    functionName,
+    args,
+  } as EncodeFunctionDataParameters);
 
   const nonce = await publicClient.getTransactionCount({
     address: account.address,
