@@ -16,6 +16,7 @@ import { TokenIcon } from "@/components/TokenIcon";
 import { DEMO_MODE } from "@/lib/config";
 import { useEnsureChain } from "@/hooks/useEnsureChain";
 import { friendlyError } from "@/lib/errors";
+import { ArrowSquareOut, CurrencyEth, Drop, SealCheck } from "@phosphor-icons/react";
 
 function FlipIcon() {
   return (
@@ -314,6 +315,46 @@ export default function SwapPage() {
           ? "Local Hardhat fixtures only — not for submission."
           : "Encrypted intents are matched in the batch. Opposing flow cancels; only residual volume hits Uniswap via NettleHook — for treasury-scale rebalances without full size on the pool."}
       </p>
+
+      {!DEMO_MODE && (
+        <section className="test-guide" aria-labelledby="test-guide-title">
+          <div className="test-guide-head">
+            <p className="eyebrow">Sepolia test funds</p>
+            <h2 id="test-guide-title">Try Nettle with a real test wallet</h2>
+            <p>Get free test ETH for gas and test USDC for the swap, then seal an encrypted intent.</p>
+          </div>
+
+          <div className="faucet-grid">
+            <a
+              className="faucet-card"
+              href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span className="faucet-icon eth"><CurrencyEth aria-hidden="true" size={24} weight="duotone" /></span>
+              <span><strong>Get Sepolia ETH</strong><small>Google Cloud faucet · pays gas</small></span>
+              <ArrowSquareOut aria-hidden="true" size={18} weight="bold" />
+            </a>
+            <a
+              className="faucet-card"
+              href="https://faucet.circle.com/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span className="faucet-icon usdc"><Drop aria-hidden="true" size={22} weight="fill" /></span>
+              <span><strong>Get test USDC</strong><small>Circle faucet · select Ethereum Sepolia</small></span>
+              <ArrowSquareOut aria-hidden="true" size={18} weight="bold" />
+            </a>
+          </div>
+
+          <ol className="how-to-test">
+            <li><span>1</span><div><strong>Fund your wallet</strong><p>Request Sepolia ETH for gas and test USDC for a buy intent.</p></div></li>
+            <li><span>2</span><div><strong>Connect and seal</strong><p>Switch to Sepolia, choose an amount, and confirm the token approval and encrypted intent.</p></div></li>
+            <li><span>3</span><div><strong>Watch the batch settle</strong><p>After the epoch closes, the keeper executes only the public residual on Uniswap.</p></div></li>
+          </ol>
+          <p className="guide-note"><SealCheck aria-hidden="true" size={17} weight="fill" /> Testnet assets have no value. Your individual signed amount remains encrypted until only the net is published.</p>
+        </section>
+      )}
     </div>
   );
 }
