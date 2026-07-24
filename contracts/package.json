@@ -6,7 +6,7 @@
   "scripts": {
     "clean": "hardhat clean",
     "compile": "hardhat compile",
-    "build": "hardhat compile",
+    "build": "node init && hardhat compile",
     "test": "hardhat test",
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy-local.ts --network localhost",
