@@ -127,7 +127,7 @@ OPEN ──submit──► OPEN ──closeEpoch──► CLOSED ──executeEp
 **Trusted keeper (not decentralized):** one address closes epochs, public-decrypts the
 net, and calls `executeEpoch`. Multi-keeper consensus is out of scope.
 
-Full design: [docs/architecture.md](docs/architecture.md) · Demo runbook: [../DEMO_SCRIPT.md](../DEMO_SCRIPT.md) · DoraHacks copy: [docs/DORAHACKS.md](docs/DORAHACKS.md) · Evidence: [docs/DEMO_EVIDENCE.md](docs/DEMO_EVIDENCE.md)
+Full design: [docs/architecture.md](docs/architecture.md) · Live evidence: [docs/DEMO_EVIDENCE.md](docs/DEMO_EVIDENCE.md) · DoraHacks copy: [docs/DORAHACKS.md](docs/DORAHACKS.md)
 
 ---
 
