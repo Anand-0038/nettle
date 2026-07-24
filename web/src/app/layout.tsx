@@ -6,7 +6,7 @@ import { NetworkBanner } from "@/components/NetworkBanner";
 
 export const metadata: Metadata = {
   title: "Nettle",
-  description: "Confidential batch swaps on Uniswap, powered by Nox.",
+  description: "Confidential notional netting for Uniswap — powered by iExec Nox.",
 };
 
 export default function RootLayout({

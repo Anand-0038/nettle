@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useAccount, useBlockNumber } from "wagmi";
 import {
   useEpoch,
@@ -96,6 +97,22 @@ export default function SwapPage() {
     setAmount(formatAmount(raw, decimalsIn, decimalsIn > 8 ? 6 : 4));
   }
 
+  // Epoch must be Open and still before closeBlock to accept seals
+  const epochOpen =
+    epoch !== undefined &&
+    epoch.state === 0 &&
+    (block === undefined || block < epoch.closeBlock);
+
+  /** Progress step for the journey strip (not buttons — status only). */
+  const journeyStep =
+    epoch === undefined
+      ? 1
+      : epoch.state === 0 && epochOpen
+        ? 1
+        : epoch.state === 0 || epoch.state === 1
+          ? 2
+          : 3;
+
   async function onSubmit() {
     setStatus(null);
     try {
@@ -104,6 +121,11 @@ export default function SwapPage() {
         setStatusKind("ok");
         setStatus(`Switched to ${targetLabel}. Enter amount and seal again.`);
         return;
+      }
+      if (!epochOpen) {
+        throw new Error(
+          "This batch is closed. Wait for the keeper to settle, then seal into the next open batch."
+        );
       }
       if (amountRaw <= 0n) throw new Error("Enter an amount greater than zero");
       if (amountRaw > balanceIn) throw new Error("Insufficient balance");
@@ -134,41 +156,55 @@ export default function SwapPage() {
               ? "Approve tokens…"
               : phase === "submitting" || isPending
                 ? "Confirm in wallet…"
-                : !amount
-                  ? "Enter amount"
-                  : amountRaw > balanceIn
-                    ? "Insufficient balance"
-                    : "Seal private intent";
+                : !epochOpen
+                  ? epoch?.state === 1
+                    ? "Batch closed · waiting to settle"
+                    : "Batch closed · wait for next open"
+                  : !amount
+                    ? "Enter amount"
+                    : amountRaw > balanceIn
+                      ? "Insufficient balance"
+                      : "Seal encrypted intent";
 
   // Allow click when wrong network so CTA can trigger switchChain
   const canSubmit =
     isConnected &&
     !isPending &&
     !!registry &&
-    (wrongNetwork || (amountRaw > 0n && amountRaw <= balanceIn));
+    (wrongNetwork ||
+      (epochOpen && amountRaw > 0n && amountRaw <= balanceIn));
 
   return (
     <div>
-      {/* How it works — one glance */}
-      <ol className="steps">
-        <li className="active">
+      {/* Journey status — not buttons; links open Batch / History */}
+      <ol className="steps" aria-label="How Nettle works">
+        <li className={journeyStep === 1 ? "active" : journeyStep > 1 ? "done" : ""}>
           <span>1</span> Seal
         </li>
-        <li>
-          <span>2</span> Batch
+        <li className={journeyStep === 2 ? "active" : journeyStep > 2 ? "done" : ""}>
+          <Link href="/batch">
+            <span>2</span> Batch
+          </Link>
         </li>
-        <li>
-          <span>3</span> Settle
+        <li className={journeyStep === 3 ? "active" : ""}>
+          <Link href="/history">
+            <span>3</span> Settle
+          </Link>
         </li>
       </ol>
+      <p className="steps-hint">
+        Status only — seal below, then watch{" "}
+        <Link href="/batch">Batch</Link> and{" "}
+        <Link href="/history">History</Link>.
+      </p>
 
       <div className="swap-card">
         <div className="swap-header">
-          <h2>Private swap</h2>
+          <h2>Seal intent</h2>
           <span className="pill">
             <span className="pill-dot" />
-            {blocksLeft > 0n
-              ? `Batch closes ~${minsLeft}m`
+            {epochOpen && blocksLeft > 0n
+              ? `Open · closes ~${minsLeft}m`
               : stateLabel}
           </span>
         </div>
@@ -255,7 +291,7 @@ export default function SwapPage() {
             </div>
             <div>
               <span>Privacy</span>
-              <strong>Size hidden until net</strong>
+              <strong>Signed size encrypted</strong>
             </div>
             <div>
               <span>Fill</span>
@@ -295,9 +331,15 @@ export default function SwapPage() {
             <em className="state-tag">{stateLabel}</em>
           </h3>
           <p>
-            {blocksLeft > 0n
-              ? `${epoch?.participantCount ?? 0} traders sealed · closes in ~${minsLeft} min`
-              : `Waiting · ${epoch?.participantCount ?? 0} in last window`}
+            {epochOpen && blocksLeft > 0n
+              ? `${epoch?.participantCount ?? 0} sealed · closes in ~${minsLeft} min`
+              : epoch?.state === 1
+                ? `${epoch.participantCount} sealed · keeper settling residual`
+                : epoch?.state === 2
+                  ? "Executed · next batch is open for seals"
+                  : !epochOpen && epoch?.state === 0
+                    ? `${epoch.participantCount} sealed · past close · waiting for keeper`
+                    : `${epoch?.participantCount ?? 0} sealed`}
           </p>
           <div className="epoch-pills">
             <span className="epoch-pill">
@@ -313,8 +355,17 @@ export default function SwapPage() {
       <p className={DEMO_MODE ? "tip quiet" : "tip"}>
         {DEMO_MODE
           ? "Local Hardhat fixtures only — not for submission."
-          : "Encrypted intents are matched in the batch. Opposing flow cancels; only residual volume hits Uniswap via NettleHook — for treasury-scale rebalances without full size on the pool."}
+          : "Confidential notional netting: opposing signed intent cancels in the encrypted book; only the residual hits Uniswap via NettleHook — not peer-to-peer matching."}
       </p>
+
+      {!DEMO_MODE && (
+        <p className="disclosure tip quiet" role="note">
+          <strong>MVP disclosure — </strong>
+          Confidential: signed intent amount and book composition. Public: wallet,
+          token escrow, escrow amount, epoch metadata, and the final residual swap.
+          A trusted keeper closes epochs and submits the publicly decrypted net.
+        </p>
+      )}
 
       {!DEMO_MODE && (
         <section className="test-guide" aria-labelledby="test-guide-title">
@@ -352,7 +403,7 @@ export default function SwapPage() {
             <li><span>2</span><div><strong>Connect and seal</strong><p>Switch to Sepolia, choose an amount, and confirm the token approval and encrypted intent.</p></div></li>
             <li><span>3</span><div><strong>Watch the batch settle</strong><p>After the epoch closes, the keeper executes only the public residual on Uniswap.</p></div></li>
           </ol>
-          <p className="guide-note"><SealCheck aria-hidden="true" size={17} weight="fill" /> Testnet assets have no value. Your individual signed amount remains encrypted until only the net is published.</p>
+          <p className="guide-note"><SealCheck aria-hidden="true" size={17} weight="fill" /> Testnet assets have no value. Your signed intent amount stays encrypted; escrow size and token direction are already public on-chain. Only the batch net is published at execute.</p>
         </section>
       )}
     </div>

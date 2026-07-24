@@ -440,6 +440,35 @@ select {
   color: #fff;
 }
 
+.steps li.done {
+  color: var(--ink);
+  opacity: 0.85;
+}
+
+.steps li a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.steps li a:hover {
+  color: var(--fox-deep);
+}
+
+.steps-hint {
+  margin: -8px 0 14px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.steps-hint a {
+  color: var(--fox-deep);
+  font-weight: 700;
+}
+
 .test-guide { margin-top: 26px; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: rgba(255, 252, 247, 0.8); box-shadow: var(--shadow-sm); }
 .test-guide-head .eyebrow { margin: 0 0 5px; color: var(--fox-deep); font: 800 0.68rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
 .test-guide h2 { margin: 0; font-size: 1.2rem; letter-spacing: -0.025em; }

@@ -156,6 +156,14 @@ export function useSubmitIntent() {
     "idle" | "switching" | "encrypting" | "approving" | "submitting"
   >("idle");
 
+  async function nextNonce(): Promise<number> {
+    // Always use pending count so approve + submit don't reuse a mined nonce
+    return publicClient!.getTransactionCount({
+      address: address!,
+      blockTag: "pending",
+    });
+  }
+
   async function submit(params: {
     direction: "buy" | "sell";
     amount: bigint;
@@ -163,6 +171,7 @@ export function useSubmitIntent() {
     if (!registry || !token0 || !token1 || !address) {
       throw new Error("Missing registry/token addresses or wallet");
     }
+    if (!publicClient) throw new Error("RPC client unavailable");
     const tokenIn = params.direction === "buy" ? token0 : token1;
     const signed =
       params.direction === "buy" ? params.amount : -params.amount;
@@ -173,7 +182,7 @@ export function useSubmitIntent() {
       await ensureChain();
 
       setPhase("approving");
-      const allowance = await publicClient!.readContract({
+      const allowance = await publicClient.readContract({
         address: tokenIn,
         abi: erc20Abi,
         functionName: "allowance",
@@ -185,8 +194,12 @@ export function useSubmitIntent() {
           abi: erc20Abi,
           functionName: "approve",
           args: [registry, params.amount],
+          nonce: await nextNonce(),
         });
-        await publicClient!.waitForTransactionReceipt({ hash: approveHash });
+        await publicClient.waitForTransactionReceipt({
+          hash: approveHash,
+          confirmations: 1,
+        });
       }
 
       if (DEMO_MODE) {
@@ -196,8 +209,9 @@ export function useSubmitIntent() {
           abi: mockRegistryAbi,
           functionName: "submitIntent",
           args: [signed, params.amount],
+          nonce: await nextNonce(),
         });
-        await publicClient!.waitForTransactionReceipt({ hash });
+        await publicClient.waitForTransactionReceipt({ hash });
         setPhase("idle");
         return hash;
       }
@@ -211,13 +225,15 @@ export function useSubmitIntent() {
       );
 
       setPhase("submitting");
+      // Fresh pending nonce after encrypt delay (can be many seconds)
       const hash = await writeContractAsync({
         address: registry,
         abi: intentRegistryAbi,
         functionName: "submitIntent",
         args: [handle, handleProof, tokenIn, params.amount],
+        nonce: await nextNonce(),
       });
-      await publicClient!.waitForTransactionReceipt({ hash });
+      await publicClient.waitForTransactionReceipt({ hash });
       setPhase("idle");
       return hash;
     } catch (e) {

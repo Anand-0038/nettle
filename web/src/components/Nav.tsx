@@ -46,7 +46,7 @@ export function Nav() {
           </div>
           <div className="brand-text">
             <h1>Nettle</h1>
-            <p>Private batch swaps</p>
+            <p>Confidential notional netting</p>
           </div>
         </div>
 
