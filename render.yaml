@@ -1,0 +1,40 @@
+# Render Blueprint — Nettle keeper (trusted MVP)
+# Dashboard service: https://dashboard.render.com/web/srv-d9gbur741pts738gc9o0
+# Live URL: https://nettle-s2q0.onrender.com
+services:
+  - type: web
+    name: nettle
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    autoDeploy: true
+    # Root directory: leave blank when the GitHub repo root is already `nettle`.
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @nettle/keeper build
+    startCommand: pnpm --filter @nettle/keeper start
+    # Use /health (always 200 while alive). /ready is for operators; free-tier
+    # cold starts must not fail deploys because Nox is still initializing.
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: CHAIN_ID
+        value: "11155111"
+      - key: KEEPER_MODE
+        value: nox
+      - key: POLL_MS
+        value: "8000"
+      - key: MIN_AMOUNT_OUT
+        value: "0"
+      - key: INTENT_REGISTRY_ADDRESS
+        value: "0xd5d950a0b211afe67ad4e5a8f28804b42bc2b71f"
+      - key: TOKEN0_ADDRESS
+        value: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+      - key: TOKEN1_ADDRESS
+        value: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
+      - key: KEEPER_PRIVATE_KEY
+        sync: false
+      - key: PRIVATE_KEY
+        sync: false
+      - key: RPC_URL
+        sync: false
