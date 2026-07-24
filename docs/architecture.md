@@ -142,7 +142,9 @@ Wallet B                │                       │                     │
 | Hook bypass / direct AMM | Registry approves **Hook only**; Executor `OnlyHook` | — |
 | Reentrancy on settle | `nonReentrant` + CEI-style state | — |
 | Failed `publicDecrypt` | Keeper retry / backoff | No admin recovery timeout (MVP) |
-| Malicious keeper | Explicit trust for MVP | Can grief close/execute timing |
+| Malicious keeper | Explicit trust for MVP | Can grief close/execute timing; can submit false `netSigned` (not proven vs handle) |
+| Escrow ≠ encrypted amount | Documented; residual clamped to balance | Semantic corruption of net vs escrow (MVP) |
+| Hook/executor init race | Keeper-only `setRegistry`; owner-only first `configure` | Live Sepolia already configured by deployer |
 | Empty epoch gas grief | Empty book rotates without publicDecrypt ACL | Keeper still pays gas to rotate |
 | RPC / log DoS on UI | Storage reads + 10-block log windows | History not infinite archive |
 

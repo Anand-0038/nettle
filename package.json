@@ -8,8 +8,10 @@
     "contracts:compile": "pnpm --filter @nettle/contracts compile",
     "contracts:test": "pnpm --filter @nettle/contracts test",
     "keeper:dev": "pnpm --filter @nettle/keeper dev",
+    "keeper:test": "pnpm --filter @nettle/keeper test",
     "web:dev": "pnpm --filter @nettle/web dev",
     "web:build": "pnpm --filter @nettle/web build",
+    "demo:sepolia-epoch": "node scripts/sepolia-opposing-epoch.mjs",
     "setup": "pnpm install && pnpm contracts:compile"
   },
   "engines": {

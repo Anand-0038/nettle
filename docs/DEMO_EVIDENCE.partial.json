@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-07-24T14:27:26.478Z",
+  "registry": "0xd5d950a0b211afe67ad4e5a8f28804b42bc2b71f",
+  "epochId": "19",
+  "walletA": "0xFB76C4B6912bCF358752Fb4b4b15B959EfaDD915",
+  "walletB": "0xd311e344720e94C5B151EF589F1220bA2469EB45",
+  "expectedNetMicroUsdc": "2000000",
+  "residualIn": "2000000",
+  "residualOut": "1811944",
+  "evidence": [
+    {
+      "step": "fund_B_eth",
+      "tx": "0xdc5a3d229f69580a6b66cffe6c4b105d100d8a26c5f0b99d69bbe409b7d4c9ab"
+    },
+    {
+      "step": "fund_B_weth",
+      "tx": "0xa66b96d249520ed618c8155349facb08566feef86c10386bb14a2e52eb2ddf57"
+    },
+    {
+      "step": "approve_A_usdc",
+      "tx": "0x1114fdcfe7f57de76d7a7951fbb7a6e05dee73dc0b641f70cd9d476308c54daf",
+      "amount": "5000000"
+    },
+    {
+      "step": "encrypt_A",
+      "handle": "0x0000aa36a74301f4ed351675fcca28983f7ae134e5a433a040fa41c6dd2f4ceb",
+      "signedAmount": "5000000",
+      "direction": "token0_in"
+    },
+    {
+      "step": "intent_A",
+      "tx": "0x1a46097312e4655239202ad41a5b61afc925e5bdd35999b3608828ac2da8c934",
+      "trader": "0xFB76C4B6912bCF358752Fb4b4b15B959EfaDD915",
+      "tokenIn": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "escrow": "5000000",
+      "signedEncrypted": "5000000",
+      "etherscan": "https://sepolia.etherscan.io/tx/0x1a46097312e4655239202ad41a5b61afc925e5bdd35999b3608828ac2da8c934"
+    },
+    {
+      "step": "approve_B_weth",
+      "tx": "0xfbbef76b1c02cf3ccaa9fb42a4e556c9a2804a3cd69d1e370d3461a2f19dcc13"
+    },
+    {
+      "step": "encrypt_B",
+      "handle": "0x0000aa36a74301a0a841ceee803f784b6e0e5282be94e453f89b6b56a2d2348a",
+      "signedAmount": "-3000000",
+      "direction": "token1_in"
+    },
+    {
+      "step": "intent_B",
+      "tx": "0xe5491e7cba0a4704846464e29bbf87f0e679fc7830ef814646196622ed774d49",
+      "trader": "0xd311e344720e94C5B151EF589F1220bA2469EB45",
+      "tokenIn": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+      "escrow": "500000000000000",
+      "signedEncrypted": "-3000000",
+      "etherscan": "https://sepolia.etherscan.io/tx/0xe5491e7cba0a4704846464e29bbf87f0e679fc7830ef814646196622ed774d49"
+    },
+    {
+      "step": "expected_net",
+      "signedA": "5000000",
+      "signedB": "-3000000",
+      "expectedNet": "2000000",
+      "narrative": "Encrypted book units are USDC micro-units for both legs. Residual |net|=3e6 USDC to AMM; B WETH escrow fully refunded (opposite side)."
+    },
+    {
+      "step": "epoch_executed",
+      "epochId": "19",
+      "state": 2,
+      "netHandle": "0x0000aa36a743017c1330216c91450df1355a951933e680d59dc2833b5e06e6ea",
+      "zeroForOne": true,
+      "residualIn": "2000000",
+      "residualOut": "1811944",
+      "buyEscrow": "5000000",
+      "sellEscrow": "500000000000000",
+      "bookMatchedHint": "5000000"
+    }
+  ],
+  "note": "Fill execute/close tx hashes from Render keeper logs or Etherscan internal txs if getLogs truncated."
+}

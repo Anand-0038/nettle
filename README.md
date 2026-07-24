@@ -1,14 +1,17 @@
 # Nettle
 
-**Confidential batch netting for Uniswap — powered by iExec Nox.**
+**Confidential intent netting for Uniswap — powered by iExec Nox.**
 
 Traders seal Nox-encrypted signed swap intents. Each epoch the book nets them with
 `Nox.add` inside Intel TDX TEEs. **Opposing signed notional cancels in the encrypted
 book.** Only residual `|net|` is validated by **NettleHook** and executed on Uniswap.
-Individual size never hits the AMM curve.
+Cancelled notional never hits the AMM curve.
 
-Built for **DAO treasuries and OTC desks**: rebalance without full size leaking to
-MEV, without forking Uniswap or changing wallets.
+Built for **institutional-style treasury workflows** (hackathon MVP): rebalance with
+less size leakage to MEV, without forking Uniswap or changing wallets.
+
+> **Positioning:** this is **confidential notional cancellation + residual AMM
+> settlement**, not a private CLOB and not peer-to-peer matching.
 
 ---
 
@@ -50,17 +53,20 @@ That is the WTF brief: **privacy as a layer**, without modifying Uniswap.
 
 ---
 
-## What “matching” means here
+## What “netting” means here (not order matching)
 
 | Claim | Reality in this repo |
 | --- | --- |
 | Running encrypted net | `ep.netEncrypted = Nox.add(net, amount)` |
-| Residual only to AMM | `executeEpoch` → Hook → UniswapV3Executor |
+| Residual only to AMM | `executeEpoch` → Hook → UniswapV4Executor → PoolManager |
 | Full CLOB / clearing price | **No** |
 | P2P fill Alice↔Bob | **No** — opposite escrow refunded |
 | Residual-side settlement | Pro-rata AMM out **+ unused escrow refund** |
 
-Judge prompt *“show me matching”* → `IntentRegistry.submitIntent` (`Nox.add`) + `_settleMatching`.
+Judge prompt *“show me netting”* → `IntentRegistry.submitIntent` (`Nox.add`) + `_settleMatching`.
+
+Judge prompt *“are users filled against each other?”* → **No.** Opposite escrow is
+returned; residual-side users take the AMM fill pro-rata.
 
 ---
 
@@ -109,13 +115,19 @@ OPEN ──submit──► OPEN ──closeEpoch──► CLOSED ──executeEp
 | Threat | Mitigation |
 | --- | --- |
 | Sandwich of full size | Only residual reaches AMM |
-| Intent size leakage | Encrypted `eint256` handles |
+| Intent size leakage | Encrypted `eint256` handles (escrow size still public) |
 | Keeper replay / double exec | `Executed` state + `onlyKeeper` + `nonReentrant` |
 | Hook bypass | Registry → Hook only; Executor `OnlyHook` |
-| Failed decryption | Keeper retry (MVP — no admin recovery) |
+| Failed decryption | Keeper retry + `/ready` degraded state (no admin recovery) |
 | Malicious keeper | **Explicitly trusted** for MVP |
+| False decrypted net | Keeper can pass wrong `netSigned`; **not verified vs handle** |
+| Escrow ≠ encrypted magnitude | **Not proven on-chain** in MVP; residual clamped to balance |
+| Init races (hook/executor) | Keeper-only `setRegistry`; owner-only first `configure` |
 
-Full design: [docs/architecture.md](docs/architecture.md) · Demo runbook: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)
+**Trusted keeper (not decentralized):** one address closes epochs, public-decrypts the
+net, and calls `executeEpoch`. Multi-keeper consensus is out of scope.
+
+Full design: [docs/architecture.md](docs/architecture.md) · Demo runbook: [../DEMO_SCRIPT.md](../DEMO_SCRIPT.md) · DoraHacks copy: [docs/DORAHACKS.md](docs/DORAHACKS.md) · Evidence: [docs/DEMO_EVIDENCE.md](docs/DEMO_EVIDENCE.md)
 
 ---
 
@@ -136,9 +148,36 @@ NettleHook is CREATE2-mined with `BEFORE_SWAP | AFTER_SWAP` flags and is the
 ## Safety (MVP)
 
 - `executeEpoch`: `onlyKeeper` + `nonReentrant` + `Closed → Executed`
-- Hook: non-registry / zero residual rejected; approvals reset
-- Executor: `OnlyHook`, `minAmountOut`, SafeERC20, approval reset
+- Hook: non-registry / zero residual rejected; approvals reset; **keeper-only** `setRegistry`
+- Executor: `OnlyHook`, `minAmountOut`, SafeERC20; **owner-only first** `configure`
 - Multi-keeper / governance / multi-pool: **out of scope** (demo reliability)
+
+## Live services
+
+| Service | URL |
+| --- | --- |
+| Web | https://nettle-web-ecru.vercel.app |
+| Keeper `/` | https://nettle-s2q0.onrender.com/ → `Nettle Keeper` |
+| Keeper `/health` | https://nettle-s2q0.onrender.com/health (always 200 if process up) |
+| Keeper `/ready` | https://nettle-s2q0.onrender.com/ready (200 only when RPC+Nox+registry OK) |
+
+### Render settings (repo root = `nettle`)
+
+| Field | Value |
+| --- | --- |
+| Root directory | *(blank)* |
+| Build | `pnpm install --frozen-lockfile && pnpm --filter @nettle/keeper build` |
+| Start | `pnpm --filter @nettle/keeper start` |
+| Health check | `/health` |
+| Node | `22` (`NODE_VERSION`) |
+
+**Do not use `corepack enable` on Render** — it fails with `EROFS` on `/usr/bin/pnpm`.
+
+Required env **names** (values in Render dashboard, never commit):  
+`KEEPER_PRIVATE_KEY`, `RPC_URL`, `CHAIN_ID`, `KEEPER_MODE`, `INTENT_REGISTRY_ADDRESS`, `POLL_MS`, `MIN_AMOUNT_OUT`, `NODE_VERSION`  
+(`PORT` is injected by Render.)
+
+Render free tier cold-starts: open `/health` once before demos (~30–90s wake). A first-request **503** during sleep is normal; a **persistent** 503 after wake means the process is not listening — check Render logs.
 
 ---
 
@@ -202,9 +241,10 @@ nettle/
   contracts/     production + test/mocks
   keeper/        KEEPER_MODE=nox
   web/           Swap · Batch · History · Inspect
-  docs/          architecture.md · DEMO_SCRIPT.md
+  docs/          architecture · DORAHACKS · DEMO_EVIDENCE · VERIFY
   deployments/sepolia.json
   feedback.md    iExec tooling feedback (deliverable)
+  render.yaml    keeper deploy blueprint
 ```
 
 ## License
