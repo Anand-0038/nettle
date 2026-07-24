@@ -104,10 +104,12 @@ contract MockIntentRegistry {
     }
 
     function setKeeper(address k) external onlyOwner {
+        require(k != address(0), "zero keeper");
         keeper = k;
     }
 
     function setExecutor(address e) external onlyOwner {
+        require(e != address(0), "zero executor");
         executor = IBatchExecutor(e);
     }
 
@@ -166,15 +168,42 @@ contract MockIntentRegistry {
     }
 
     /// @notice Keeper executes ONE net swap against the AMM, then opens the next epoch.
+    /// @notice Keeper executes residual. Optional `netOverride` simulates a malicious keeper
+    ///         lying about the decrypted net (MVP trust assumption for production Nox path).
     function executeEpoch(uint256 minAmountOut) external onlyKeeper returns (uint256 amountOut) {
+        return _executeEpoch(minAmountOut, type(int256).min);
+    }
+
+    function executeEpochWithNet(int256 netOverride, uint256 minAmountOut)
+        external
+        onlyKeeper
+        returns (uint256 amountOut)
+    {
+        return _executeEpoch(minAmountOut, netOverride);
+    }
+
+    function _executeEpoch(uint256 minAmountOut, int256 netOverride)
+        internal
+        returns (uint256 amountOut)
+    {
         Epoch storage ep = epochs[currentEpochId];
         if (ep.state != EpochState.Closed) revert EpochNotClosed();
+        if (ep.state == EpochState.Executed) revert AlreadySettled();
 
-        int256 net = ep.netSigned;
+        int256 net = netOverride == type(int256).min ? ep.netSigned : netOverride;
         if (net == 0) {
             ep.state = EpochState.Executed;
             ep.absAmountIn = 0;
             ep.amountOut = 0;
+            // refund all when zero net
+            uint256[] storage ids0 = epochIntentIds[currentEpochId];
+            for (uint256 i = 0; i < ids0.length; i++) {
+                Intent storage it = intents[currentEpochId][ids0[i]];
+                if (it.settled) continue;
+                it.settled = true;
+                IERC20(it.tokenIn).safeTransfer(it.trader, it.escrowed);
+                emit IntentSettled(currentEpochId, ids0[i], it.trader, 0);
+            }
             emit EpochExecuted(currentEpochId, true, 0, 0);
             _openEpoch();
             return 0;
@@ -183,6 +212,9 @@ contract MockIntentRegistry {
         bool zeroForOne = net > 0;
         uint256 amountIn = net > 0 ? uint256(net) : uint256(-net);
         address tokenIn = zeroForOne ? address(token0) : address(token1);
+
+        uint256 available = IERC20(tokenIn).balanceOf(address(this));
+        if (amountIn > available) amountIn = available;
 
         IERC20(tokenIn).forceApprove(address(executor), amountIn);
         amountOut = executor.executeNetSwap(zeroForOne, amountIn, minAmountOut);
@@ -201,7 +233,6 @@ contract MockIntentRegistry {
         Epoch storage ep = epochs[epochId];
         uint256[] storage ids = epochIntentIds[epochId];
         if (ep.absAmountIn == 0 || ids.length == 0) {
-            // refund everyone
             for (uint256 i = 0; i < ids.length; i++) {
                 Intent storage it = intents[epochId][ids[i]];
                 if (it.settled) continue;
@@ -213,18 +244,24 @@ contract MockIntentRegistry {
         }
 
         // Residual side: pro-rata AMM out + unused escrow refund.
-        // Opposite side: full refund (privacy cancel vs AMM, not P2P fill).
+        // Opposite side: full refund (notional cancel vs AMM, not P2P fill).
         bool netZeroForOne = ep.zeroForOne;
         address netTokenIn = netZeroForOne ? address(token0) : address(token1);
         address outTok = netZeroForOne ? address(token1) : address(token0);
         uint256 sideTotal;
+        uint256 residualSideCount;
         for (uint256 i = 0; i < ids.length; i++) {
             Intent storage it = intents[epochId][ids[i]];
             bool intentZeroForOne = it.signedAmount > 0;
             if (intentZeroForOne == netZeroForOne) {
                 sideTotal += it.escrowed;
+                residualSideCount += 1;
             }
         }
+
+        uint256 consumedAllocated;
+        uint256 outAllocated;
+        uint256 residualSeen;
 
         for (uint256 i = 0; i < ids.length; i++) {
             Intent storage it = intents[epochId][ids[i]];
@@ -232,8 +269,19 @@ contract MockIntentRegistry {
             it.settled = true;
             bool intentZeroForOne = it.signedAmount > 0;
             if (intentZeroForOne == netZeroForOne && sideTotal > 0) {
-                uint256 consumed = (ep.absAmountIn * it.escrowed) / sideTotal;
-                uint256 shareOut = (ep.amountOut * it.escrowed) / sideTotal;
+                residualSeen += 1;
+                uint256 consumed;
+                uint256 shareOut;
+                if (residualSeen == residualSideCount) {
+                    consumed = ep.absAmountIn - consumedAllocated;
+                    shareOut = ep.amountOut - outAllocated;
+                } else {
+                    consumed = (ep.absAmountIn * it.escrowed) / sideTotal;
+                    shareOut = (ep.amountOut * it.escrowed) / sideTotal;
+                    consumedAllocated += consumed;
+                    outAllocated += shareOut;
+                }
+                if (consumed > it.escrowed) consumed = it.escrowed;
                 uint256 refundIn = it.escrowed > consumed ? it.escrowed - consumed : 0;
                 if (refundIn > 0) IERC20(netTokenIn).safeTransfer(it.trader, refundIn);
                 if (shareOut > 0) IERC20(outTok).safeTransfer(it.trader, shareOut);

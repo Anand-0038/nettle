@@ -14,13 +14,15 @@ import {IBatchExecutor} from "./interfaces/IBatchExecutor.sol";
 /// @title IntentRegistry — confidential batch netting + residual AMM
 /// @notice Encrypted signed intents are netted in TEE (`Nox.add` on `eint256`).
 ///         Opposing signed notional cancels in the encrypted book; **only residual |net|**
-///         goes Registry → NettleHook → UniswapV3Executor → SwapRouter02.
+///         goes Registry → NettleHook → UniswapV4Executor → PoolManager.swap.
 /// @dev This is a **batch netter with residual settlement**, not a full CLOB:
-///      - Matching = `Nox.add` running encrypted net (not per-order fills).
-///      - Opposite escrow is refunded (privacy cancel vs AMM), not P2P token exchange
+///      - Netting = `Nox.add` running encrypted net (not per-order fills / matching).
+///      - Opposite escrow is refunded (notional cancel vs AMM), not P2P token exchange
 ///        (that would require a clearing price). Residual-side traders get pro-rata
 ///        AMM output **and** unused escrow refund.
 /// @dev +amount = token0 in (buy token1); −amount = token1 in (sell token1)
+/// @dev MVP trust: keeper-supplied `netSigned` is NOT verified against `ep.netHandle`.
+///      Encrypted magnitude is NOT proven equal to `escrowAmount` on-chain (Nox limit).
 contract IntentRegistry is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -149,10 +151,12 @@ contract IntentRegistry is ReentrancyGuard {
     }
 
     function setKeeper(address k) external onlyOwner {
+        require(k != address(0), "zero keeper");
         keeper = k;
     }
 
     function setExecutor(address e) external onlyOwner {
+        require(e != address(0), "zero executor");
         executor = IBatchExecutor(e);
     }
 
@@ -231,8 +235,11 @@ contract IntentRegistry is ReentrancyGuard {
     }
 
     /// @notice Keeper submits publicly decrypted net. Only |net| residual hits AMM via Hook.
-    /// @dev Replay-safe: requires Closed; sets Executed before external calls complete
-    ///      via CEI where possible — state flipped before transfers in settlement.
+    /// @dev TRUSTED KEEPER: `netSigned` is not proven equal to the Nox-decrypted `ep.netHandle`.
+    ///      A malicious keeper can pass a wrong net (direction/magnitude) within escrow balances.
+    /// @dev State order: for nonzero residual, `Executed` is set AFTER the external swap succeeds.
+    ///      If the swap or later settlement reverts, the whole tx reverts (atomic). `nonReentrant`
+    ///      blocks same-function reentry; this is not CEI in the classic "state first" sense.
     function executeEpoch(int256 netSigned, uint256 minAmountOut)
         external
         onlyKeeper
@@ -261,8 +268,6 @@ contract IntentRegistry is ReentrancyGuard {
         uint256 available = IERC20(tokenIn).balanceOf(address(this));
         if (residualIn > available) residualIn = available;
 
-        // Mark executed BEFORE external call to prevent re-entry execute
-        // (nonReentrant also guards). Residual params stored for settlement.
         ep.zeroForOne = zeroForOne;
         ep.absAmountIn = residualIn;
 
@@ -271,6 +276,7 @@ contract IntentRegistry is ReentrancyGuard {
         amountOut = executor.executeNetSwap(zeroForOne, residualIn, minAmountOut);
         IERC20(tokenIn).forceApprove(address(executor), 0);
 
+        // After successful external call — if settlement reverts, swap reverts too.
         ep.state = EpochState.Executed;
         ep.amountOut = amountOut;
 
@@ -294,7 +300,9 @@ contract IntentRegistry is ReentrancyGuard {
     }
 
     /// @dev Residual-side: pro-rata AMM out + unused escrow refund.
-    ///      Opposite side: full escrow return (privacy cancel vs AMM — not P2P fill).
+    ///      Opposite side: full escrow return (notional cancel vs AMM — not P2P fill).
+    /// @dev Last residual-side participant receives rounding remainder so
+    ///      sum(consumed) == residualIn and sum(shareOut) == amountOut.
     function _settleMatching(uint256 epochId) internal {
         Epoch storage ep = epochs[epochId];
         uint256[] storage ids = epochIntentIds[epochId];
@@ -308,11 +316,17 @@ contract IntentRegistry is ReentrancyGuard {
         address netTokenOut = netZfo ? address(token1) : address(token0);
 
         uint256 sideTotal;
+        uint256 residualSideCount;
         for (uint256 i = 0; i < ids.length; i++) {
             if (intents[epochId][ids[i]].tokenIn == netTokenIn) {
                 sideTotal += intents[epochId][ids[i]].escrowed;
+                residualSideCount += 1;
             }
         }
+
+        uint256 consumedAllocated;
+        uint256 outAllocated;
+        uint256 residualSeen;
 
         for (uint256 i = 0; i < ids.length; i++) {
             Intent storage it = intents[epochId][ids[i]];
@@ -320,8 +334,20 @@ contract IntentRegistry is ReentrancyGuard {
             it.settled = true;
 
             if (it.tokenIn == netTokenIn && sideTotal > 0) {
-                uint256 consumed = (ep.absAmountIn * it.escrowed) / sideTotal;
-                uint256 shareOut = (ep.amountOut * it.escrowed) / sideTotal;
+                residualSeen += 1;
+                uint256 consumed;
+                uint256 shareOut;
+                if (residualSeen == residualSideCount) {
+                    // Final residual-side participant gets dust remainder
+                    consumed = ep.absAmountIn - consumedAllocated;
+                    shareOut = ep.amountOut - outAllocated;
+                } else {
+                    consumed = (ep.absAmountIn * it.escrowed) / sideTotal;
+                    shareOut = (ep.amountOut * it.escrowed) / sideTotal;
+                    consumedAllocated += consumed;
+                    outAllocated += shareOut;
+                }
+                if (consumed > it.escrowed) consumed = it.escrowed;
                 uint256 refundIn = it.escrowed > consumed ? it.escrowed - consumed : 0;
                 if (refundIn > 0) {
                     IERC20(netTokenIn).safeTransfer(it.trader, refundIn);

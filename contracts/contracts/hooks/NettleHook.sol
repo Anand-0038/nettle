@@ -84,14 +84,17 @@ contract NettleHook is IBatchExecutor {
         // We do not force-revert here so local tests without mining still compile/deploy.
     }
 
+    /// @notice Only the keeper may set (or update) the registry — no first-caller race.
     function setRegistry(address registry_) external {
-        if (registry != address(0) && msg.sender != keeper) revert NotKeeper();
+        if (msg.sender != keeper) revert NotKeeper();
+        require(registry_ != address(0), "zero registry");
         registry = registry_;
         emit RegistrySet(registry_);
     }
 
     function setKeeper(address k) external {
         if (msg.sender != keeper) revert NotKeeper();
+        require(k != address(0), "zero keeper");
         keeper = k;
         emit KeeperUpdated(k);
     }

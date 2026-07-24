@@ -33,12 +33,15 @@ contract UniswapV4Executor is IBatchExecutor, IUnlockCallback {
     address public hook; // NettleHook (batch gate + optional pool hooks)
     address public settlement; // IntentRegistry
     address public poolHooks; // hooks field in PoolKey (often same as NettleHook, or address(0))
+    /// @notice Deployer; sole party allowed to perform first-time configure.
+    address public immutable owner;
 
     error OnlyHook();
     error OnlyPoolManager();
     error NotConfigured();
     error ZeroAmount();
     error Slippage();
+    error NotAuthorized();
 
     event ResidualV4Swap(
         bool zeroForOne, uint256 amountIn, uint256 amountOut, address poolHooks
@@ -57,10 +60,18 @@ contract UniswapV4Executor is IBatchExecutor, IUnlockCallback {
         token1 = IERC20(token1_);
         poolFee = poolFee_;
         tickSpacing = tickSpacing_;
+        owner = msg.sender;
     }
 
+    /// @notice First configure: only `owner`. Later updates: only `settlement`.
+    ///         Closes the previous first-caller initialization race.
     function configure(address hook_, address settlement_, address poolHooks_) external {
-        require(hook == address(0) || msg.sender == settlement, "locked");
+        if (hook == address(0)) {
+            if (msg.sender != owner) revert NotAuthorized();
+        } else if (msg.sender != settlement) {
+            revert NotAuthorized();
+        }
+        require(hook_ != address(0) && settlement_ != address(0), "zero");
         hook = hook_;
         settlement = settlement_;
         poolHooks = poolHooks_;
